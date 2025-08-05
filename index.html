@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber Rejected Rides Stopwatch</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .message-box {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: #fff; padding: 20px; border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;
+            text-align: center; font-family: 'Inter', sans-serif;
+            max-width: 300px;
+        }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); display: flex;
+            justify-content: center; align-items: center; z-index: 1001;
+            color: white; font-size: 1.5rem;
+        }
+        input[type="text"], input[type="date"], input[type="time"], select {
+            border: 1px solid #cbd5e0;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.2);
+            margin-left: 0.5rem;
+        }
+        .lap-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8">
+        <h1 class="text-4xl font-extrabold text-slate-800 text-center mb-6">
+            Uber Rejected Rides Stopwatch
+        </h1>
+        <p class="text-center text-slate-600 mb-8">
+            Track time spent rejecting rides and the number of rejections.
+        </p>
+
+        <!-- Section 1: Observation Details -->
+        <div id="observationDetailsSection" class="mb-6 bg-slate-50 p-6 rounded-xl shadow-inner">
+            <h2 class="text-2xl font-bold text-slate-700 mb-4">Observation Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="inputDate" class="block text-slate-700 text-sm font-semibold mb-1">Date</label>
+                    <input type="date" id="inputDate" class="focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                <div>
+                    <label for="inputStartTime" class="block text-slate-700 text-sm font-semibold mb-1">Start Time (approx.)</label>
+                    <input type="time" id="inputStartTime" class="focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                <div>
+                    <label for="inputDayOfWeek" class="block text-slate-700 text-sm font-semibold mb-1">Day of Week</label>
+                    <select id="inputDayOfWeek" class="focus:ring-teal-500 focus:border-teal-500">
+                        <option value="">Auto-Detect or Select</option>
+                        <option value="Sunday">Sunday</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center mb-4">
+                <input type="checkbox" id="inputPublicHoliday" class="mr-2 text-teal-600 focus:ring-teal-500 rounded">
+                <label for="inputPublicHoliday" class="text-slate-700 text-sm font-semibold">Public Holiday?</label>
+            </div>
+            <div class="mb-4">
+                <label for="inputSpecialEvent" class="block text-slate-700 text-sm font-semibold mb-1">Special Event (e.g., Concert, Game)</label>
+                <input type="text" id="inputSpecialEvent" class="focus:ring-teal-500 focus:border-teal-500" placeholder="Any major event happening?">
+            </div>
+        </div>
+
+        <!-- Section 2: Stopwatch -->
+        <div id="stopwatchSection" class="mb-6 bg-slate-50 p-6 rounded-xl shadow-inner text-center">
+            <h2 class="text-2xl font-bold text-slate-700 mb-4">Stopwatch</h2>
+            <div id="display" class="text-5xl font-mono text-slate-800 mb-6">00:00:00</div>
+            <div class="flex flex-wrap justify-center gap-4 mb-6">
+                <button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-md transform hover:scale-105">
+                    Start
+                </button>
+                <button id="lapBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-md transform hover:scale-105" disabled>
+                    Reject Ride
+                </button>
+                <button id="endObservationBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-md transform hover:scale-105" disabled>
+                    End Observation
+                </button>
+                <button id="resetBtn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-md transform hover:scale-105">
+                    Reset
+                </button>
+            </div>
+            <div class="mb-4">
+                <h3 class="text-xl font-semibold text-slate-700 mb-2">Rejected Ride Times:</h3>
+                <ul id="lapList" class="lap-list text-left text-slate-700">
+                    <!-- Lap times will appear here -->
+                </ul>
+            </div>
+            <button id="submitDataBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-md transform hover:scale-105" disabled>
+                Submit Rejected Ride Data
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL FOR REJECTED RIDES
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxRsG3MBjGbfts7Bc29qe63bHgGzcX9GvIzUI7-GonmcKRDOWSTAHDkQDRKb6dOiZ5KLw/exec'; 
+
+        // UI Elements
+        const display = document.getElementById('display');
+        const startBtn = document.getElementById('startBtn');
+        const lapBtn = document.getElementById('lapBtn');
+        const endObservationBtn = document.getElementById('endObservationBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const lapList = document.getElementById('lapList');
+        const submitDataBtn = document.getElementById('submitDataBtn');
+
+        // Input Fields (Observation Details)
+        const inputDate = document.getElementById('inputDate');
+        const inputStartTime = document.getElementById('inputStartTime');
+        const inputDayOfWeek = document.getElementById('inputDayOfWeek');
+        const inputPublicHoliday = document.getElementById('inputPublicHoliday');
+        const inputSpecialEvent = document.getElementById('inputSpecialEvent');
+        
+        // Stopwatch State Variables
+        let timer = null;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let lastLapTime = 0;
+        let rejectedLapTimes = []; // Stores durations between rejections
+
+        // --- Initial Setup ---
+        // Set today's date and current time by default
+        inputDate.valueAsDate = new Date();
+        inputStartTime.value = new Date().toTimeString().substring(0, 5); // HH:MM
+        inputDayOfWeek.value = new Date().toLocaleString('en-us', { weekday: 'long' });
+
+        // Initial UI State
+        setUIState('initial');
+
+        // --- Helper Functions ---
+        function formatTime(ms) {
+            const hours = Math.floor(ms / 3600000);
+            const minutes = Math.floor((ms % 3600000) / 60000);
+            const seconds = Math.floor(((ms % 3600000) % 60000) / 1000);
+            const pad = (num) => num < 10 ? '0' + num : num;
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        function updateDisplay() {
+            const now = Date.now();
+            elapsedTime = now - startTime;
+            display.textContent = formatTime(elapsedTime);
+        }
+
+        function setUIState(state) {
+            // Disable all buttons initially
+            startBtn.disabled = true;
+            lapBtn.disabled = true;
+            endObservationBtn.disabled = true;
+            resetBtn.disabled = true;
+            submitDataBtn.disabled = true;
+
+            switch (state) {
+                case 'initial':
+                    startBtn.disabled = false;
+                    resetBtn.disabled = false;
+                    break;
+                case 'running':
+                    startBtn.disabled = true;
+                    lapBtn.disabled = false;
+                    endObservationBtn.disabled = false;
+                    resetBtn.disabled = false;
+                    break;
+                case 'observation_ended':
+                    startBtn.disabled = true;
+                    lapBtn.disabled = true;
+                    endObservationBtn.disabled = true;
+                    submitDataBtn.disabled = false; // Enable submit after observation ends
+                    resetBtn.disabled = false;
+                    break;
+                case 'submitted': // After successful submission, reset to initial
+                    setUIState('initial');
+                    break;
+            }
+        }
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', () => {
+            if (!timer) {
+                startTime = Date.now() - elapsedTime;
+                lastLapTime = startTime;
+                rejectedLapTimes = []; // Ensure clear on start
+                lapList.innerHTML = ''; // Clear lap list on start
+                timer = setInterval(updateDisplay, 100);
+                setUIState('running');
+            }
+        });
+
+        lapBtn.addEventListener('click', () => {
+            if (timer) {
+                const currentLapTime = Date.now();
+                const lapDuration = currentLapTime - lastLapTime;
+                rejectedLapTimes.push(lapDuration);
+
+                const li = document.createElement('li');
+                li.textContent = `Rejected Ride #${rejectedLapTimes.length}: ${formatTime(lapDuration)}`;
+                lapList.appendChild(li);
+
+                lastLapTime = currentLapTime;
+            }
+        });
+
+        endObservationBtn.addEventListener('click', () => {
+            clearInterval(timer);
+            timer = null;
+            setUIState('observation_ended');
+        });
+
+        resetBtn.addEventListener('click', () => {
+            clearInterval(timer);
+            timer = null;
+            startTime = 0;
+            elapsedTime = 0;
+            lastLapTime = 0;
+            rejectedLapTimes = [];
+            display.textContent = '00:00:00';
+            lapList.innerHTML = ''; // Clear lap list
+            
+            // Reset all input fields
+            inputDate.valueAsDate = new Date();
+            inputStartTime.value = new Date().toTimeString().substring(0, 5);
+            inputDayOfWeek.value = new Date().toLocaleString('en-us', { weekday: 'long' });
+            inputPublicHoliday.checked = false;
+            inputSpecialEvent.value = '';
+
+            setUIState('initial');
+        });
+
+        submitDataBtn.addEventListener('click', async () => {
+            const date = inputDate.value;
+            const startTime = inputStartTime.value;
+            const dayOfWeek = inputDayOfWeek.value;
+            const publicHoliday = inputPublicHoliday.checked ? 'Yes' : 'No';
+            const specialEvent = inputSpecialEvent.value.trim();
+
+            if (!date || !startTime || !dayOfWeek) {
+                showMessage('Please fill in Date, Start Time, and Day of Week.', 'error');
+                return;
+            }
+
+            if (WEB_APP_URL === 'YOUR_REJECTED_RIDES_APPS_SCRIPT_URL_HERE' || !WEB_APP_URL.startsWith('https://script.google.com/macros/s/')) {
+                showMessage('Please replace "YOUR_REJECTED_RIDES_APPS_SCRIPT_URL_HERE" in the HTML code with your actual deployed Google Apps Script Web App URL.', 'error');
+                return;
+            }
+
+            // Calculate total rejected time in minutes
+            const totalRejectedTimeMs = rejectedLapTimes.reduce((sum, current) => sum + current, 0);
+            const totalRejectedTimeMin = (totalRejectedTimeMs / 60000).toFixed(2); // Convert ms to minutes
+
+            const formData = new FormData();
+            formData.append('date', date);
+            formData.append('startTime', startTime);
+            formData.append('dayOfWeek', dayOfWeek);
+            formData.append('totalRejectedTime', totalRejectedTimeMin);
+            formData.append('numRejectedRides', rejectedLapTimes.length);
+            formData.append('publicHoliday', publicHoliday);
+            formData.append('specialEvent', specialEvent);
+
+            showLoading('Submitting rejected ride data...');
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Rejected ride data submitted successfully!', 'success');
+                    resetBtn.click(); // Reset the app after successful submission
+                } else {
+                    showMessage(`Error submitting data: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}. Check console for details.`, 'error');
+                console.error('Fetch error:', error);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Custom message box for iFrame compatibility and better UX
+        function showMessage(message, type = 'info') {
+            const existingBox = document.querySelector('.message-box');
+            if (existingBox) existingBox.remove();
+
+            const alertBox = document.createElement('div');
+            alertBox.className = 'message-box';
+            let bgColor = 'bg-teal-100';
+            let textColor = 'text-teal-800';
+            if (type === 'error') {
+                bgColor = 'bg-red-100';
+                textColor = 'text-red-800';
+            } else if (type === 'success') {
+                bgColor = 'bg-green-100';
+                textColor = 'text-green-800';
+            }
+
+            alertBox.innerHTML = `
+                <div class="${bgColor} ${textColor} p-4 rounded-lg mb-4">
+                    <p class="text-lg">${message}</p>
+                </div>
+                <button class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md" onclick="this.parentNode.remove()">
+                    OK
+                </button>
+            `;
+            document.body.appendChild(alertBox);
+        }
+
+        let loadingOverlay = null;
+        function showLoading(message) {
+            if (!loadingOverlay) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'loading-overlay';
+                document.body.appendChild(loadingOverlay);
+            }
+            loadingOverlay.innerHTML = `<p>${message}</p>`;
+            loadingOverlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
